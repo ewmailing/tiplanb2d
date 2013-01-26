@@ -1,0 +1,18 @@
+#
+# this is your module manifest and used by Titanium
+# during compilation, packaging, distribution, etc.
+#
+version: 0.1
+apiversion: 2
+description: My module
+author: Your Name
+license: Specify your license
+copyright: Copyright (c) 2013 by Your Company
+
+
+# these should not be edited
+name: box2d
+moduleid: org.box2d.box2d
+guid: ffced458-cfcb-4213-9763-bce6db587163
+platform: android
+minsdk: 2.1.4.GA
