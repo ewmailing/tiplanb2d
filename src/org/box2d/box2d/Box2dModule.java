@@ -24,6 +24,13 @@ public class Box2dModule extends KrollModule
 	private static final String LCAT = "Box2dModule";
 	private static final boolean DBG = TiConfig.LOGD;
 
+
+	static
+	{
+		System.loadLibrary("Box2D");
+		System.loadLibrary("Box2Dgdx");		
+	}
+
 	// You can define constants with @Kroll.constant, for example:
 	// @Kroll.constant public static final String EXTERNAL_NAME = value;
 	
