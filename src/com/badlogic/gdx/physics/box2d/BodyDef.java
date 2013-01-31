@@ -43,7 +43,8 @@ public class BodyDef {
 	public BodyType type = BodyType.StaticBody;
 
 	/** The world position of the body. Avoid creating bodies at the origin since this can lead to many overlapping shapes. **/
-	public final Vector2 position = new Vector2();
+	public Vector2 position = new Vector2();
+//	public final Vector2 position = new Vector2();
 
 	/** The world angle of the body in radians. **/
 	public float angle = 0;

@@ -37,6 +37,7 @@ import com.badlogic.gdx.physics.box2d.Shape;
 import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 
+import org.box2d.box2d.BodyProxy;
 
 // This proxy can be created by calling Box2d.createBox2dWorld({message: "hello world"})
 @Kroll.proxy(creatableInModule=Box2dModule.class)
@@ -45,14 +46,15 @@ public class Box2dWorldProxy extends TiViewProxy
 	// Standard Debugging variables
 	private static final String LCAT = "Box2dWorldProxy";
 	private static final boolean DBG = TiConfig.LOGD;
+	private static final int PTM_RATIO = 16; // magic number from iOS version
 
 	private World theWorld;
 	private Box2dWorld worldView;
 	private ArrayList listOfBodies;
+	private Handler ticksTimer;
 
 	private class Box2dWorld extends TiUIView
-	
-{
+	{
 	// Standard Debugging variables
 //	private static final String LCAT = "Box2dWorld";
 //	private static final boolean DBG = TiConfig.LOGD;
@@ -87,9 +89,12 @@ public class Box2dWorldProxy extends TiViewProxy
 		
 	//	synchronized(this)
 		{
+			
 			Vector2 gravity = new Vector2(0.0f, -9.81f);
 			theWorld = new com.badlogic.gdx.physics.box2d.World(gravity, false);
 			theWorld.setContinuousPhysics(true);
+		Log.d(LCAT, "printing gravity/world: " + theWorld);
+			
 			/*
 			if (contactListener)
 			{
@@ -134,34 +139,52 @@ public class Box2dWorldProxy extends TiViewProxy
 
 	// Methods
 	//
-	@Kroll.method	
+	@Kroll.method
 	public void start()
 	{
-		final Handler h = new Handler();
+		if(null != ticksTimer)
+		{
+			return;
+		}
+
+		// From experience, Android timers like this are terrible and will drift.
+		// This should be replaced.
+		ticksTimer = new Handler();
 		final int delay = (int)(1.0f/60.0f*1000f);//milli seconds
 
-		h.postDelayed(new Runnable()
+		ticksTimer.postDelayed(new Runnable()
 			{
 				public void run()
 				{
 					//do something
 					tick();
-					h.postDelayed(this, delay); // milliseconds
+					synchronized(ticksTimer)
+					{
+						ticksTimer.postDelayed(this, delay); // milliseconds
+					}
 				}
 			},
 			delay
 		);
 	}
+	@Kroll.method
+	public void stop()
+	{
+		synchronized(ticksTimer)
+		{
+			ticksTimer = null;
+		}
+	}
 
 	private void tick()
 	{
-		Log.d(LCAT, "tick : " );
+//		Log.d(LCAT, "tick : " );
 		
 		if(null != theWorld)
 		{
 			synchronized(this)
 			{
-		Log.d(LCAT, "tick synchronized: " );
+//		Log.d(LCAT, "tick synchronized: " );
 				
 				final int velocityIterations = 8;
 				final int positionIterations = 1;
@@ -171,13 +194,57 @@ public class Box2dWorldProxy extends TiViewProxy
 				theWorld.step(1.0f/60.0f, velocityIterations, positionIterations);
 
 		//CGSize size = [[surface view] bounds].size;
+		Log.d(LCAT, "tick theWorld: " + theWorld );
 		
 		//Iterate over the bodies in the physics world
 		Iterator<Body> body_iter = theWorld.getBodies();
+		Log.d(LCAT, "tick body_iter: "+ body_iter );
+		
 		while(body_iter.hasNext())
 		{
 			Body current_body = body_iter.next();
+		Log.d(LCAT, "current_body: " + current_body );
+			
 			Object user_data = current_body.getUserData();
+		Log.d(LCAT, "user_data: " + user_data );
+			
+			if(null != user_data)
+			{
+				if(user_data instanceof BodyProxy) 
+				{
+					BodyProxy body_proxy = (BodyProxy)user_data;
+
+					TiUIView ti_physical_view = body_proxy.viewproxy().getOrCreateView();
+					View native_physical_view = ti_physical_view.getNativeView();
+
+					Vector2 position = current_body.getPosition();
+		
+					float new_center_x = position.x * PTM_RATIO;
+					int surface_height = this.getOrCreateView().getNativeView().getHeight();
+					float new_center_y = surface_height - position.y * PTM_RATIO;
+
+					int physical_width = native_physical_view.getWidth();
+					int physical_height = native_physical_view.getHeight();
+					int new_left = (int)(new_center_x - physical_width/2.0f);
+					int new_bottom = (int)(new_center_y - physical_height/2.0f);
+					native_physical_view.setLeft(new_left);
+					native_physical_view.setBottom(new_bottom);
+
+		Log.d(LCAT, "tick new_left: " + new_left + " new_bottom " + new_bottom);
+					
+					/*
+		int physical_left =  native_physical_view.getLeft();
+		int physical_bottom =  native_physical_view.getBottom();
+		int physical_center_x = (physical_width/2)+physical_left;
+		int physical_center_y = (physical_height/2)+physical_bottom;
+
+		int box_width = physical_width/PTM_RATIO/2;
+		int box_height = physical_height/PTM_RATIO/2;
+*/
+					// Skip rotation for now. It's not going to work right on Android views anyway.
+				}
+
+			}
 			/*
 			if (ud != NULL && sizeof(ud)==sizeof(id) && [(id)ud isKindOfClass:[TiBox2dBodyProxy class]])
 			{
@@ -199,7 +266,7 @@ public class Box2dWorldProxy extends TiViewProxy
 		}
 	}
 	@Kroll.method
-	public void addBody(Object[] args)
+	public BodyProxy addBody(Object[] args)
 	{
 		synchronized(this)
 		{
@@ -239,7 +306,6 @@ public class Box2dWorldProxy extends TiViewProxy
             }
         });
 */
-		final int PTM_RATIO = 16; // magic number from iOS version
 
 		TiUIView ti_physical_view = viewproxy.getOrCreateView();
 
@@ -260,6 +326,10 @@ public class Box2dWorldProxy extends TiViewProxy
 
 
 		Log.d(LCAT, "printing worldView: " + worldView);
+		Log.d(LCAT, "printing physical_left: " + physical_left);
+		Log.d(LCAT, "printing physical_bottom: " + physical_bottom);
+		Log.d(LCAT, "printing box_width: " + box_width);
+		Log.d(LCAT, "printing box_height: " + box_height);
 
 		int surface_height = this.getOrCreateView().getNativeView().getHeight();
 //		int surface_height = worldView.getNativeView().getHeight();
@@ -277,7 +347,8 @@ public class Box2dWorldProxy extends TiViewProxy
 		}
 	
 //	TiBox2dBodyProxy *bp = nil;
-	
+box_width=50;
+box_height=50;
 	if(null != theWorld && box_width > 0 && box_height > 0)
 	{
 
@@ -371,7 +442,9 @@ public class Box2dWorldProxy extends TiViewProxy
 			the_body.setType(BodyDef.BodyType.KinematicBody);		
 		}
 
-
+		BodyProxy body_proxy = new BodyProxy(the_body, viewproxy);
+		the_body.setUserData(body_proxy);
+		
 			/*
 			// we abuse the tag property as pointer to the physical body
 		physicalView.tag = (int)body;
@@ -384,8 +457,10 @@ public class Box2dWorldProxy extends TiViewProxy
 	
 	return bp;
 		*/
+		return body_proxy;
 		}
 		}
+		return null;
 	}
 
 

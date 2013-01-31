@@ -8,6 +8,9 @@
 var win = Ti.UI.createWindow({
 	backgroundColor:'white'
 });
+var view = Ti.UI.createView();
+win.add(view);
+
 var label = Ti.UI.createLabel();
 win.add(label);
 win.open();
@@ -35,5 +38,44 @@ if (Ti.Platform.name == "android") {
 	proxy.message = "Hi world!.  It's me again.";
 	proxy.printMessage("Hello world!");
 	win.add(proxy);
+/*
+		var proxy = box2d.createOtherExample({
+		message: "Creating an example Proxy",
+		backgroundColor: "red",
+		width: 100,
+		height: 100,
+		top: 100,
+		left: 150
+	});
+
+	*/
+	
+// create the world, using view as the surface
+var world = box2d.createBox2dWorld({
+		message: "Creating an example Proxy",
+		backgroundColor: "red",
+		width: 100,
+		height: 100,
+		top: 100,
+		left: 150
+	});
+
+var redBlock = Ti.UI.createView({
+	backgroundColor: "red",
+	width: 50,
+	height: 50,
+	top: 0
+});
+
+
+// add the block body to the world
+var redBodyRef = world.addBody(redBlock, {
+	density: 12.0,
+	friction: 0.3,
+	restitution: 0.4,
+	type: "dynamic"
+});
+
 }
+world.start();
 
