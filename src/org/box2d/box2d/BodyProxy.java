@@ -24,6 +24,10 @@ import android.app.Activity;
 
 import com.badlogic.gdx.physics.box2d.Body;
 
+import co.lanica.platino.proxy.GameViewProxy;
+import co.lanica.platino.proxy.SpriteProxy;
+import co.lanica.platino.PlatinoSprite;
+
 // This proxy can be created by calling Box2d.createBody({message: "hello world"})
 @Kroll.proxy(creatableInModule=Box2dModule.class)
 public class BodyProxy extends TiViewProxy
@@ -57,7 +61,8 @@ public class BodyProxy extends TiViewProxy
 	}
 
 	private Body theBody;
-	private TiViewProxy viewProxy;
+	private SpriteProxy viewProxy;
+	private GameViewProxy theSurface;
 
 
 	// Constructor
@@ -65,11 +70,12 @@ public class BodyProxy extends TiViewProxy
 	{
 		super();
 	}
-	public BodyProxy(Body the_body, TiViewProxy the_proxy)
+	public BodyProxy(Body the_body, SpriteProxy the_proxy, GameViewProxy the_surface)
 	{
 		super();
 		theBody = the_body;
 		viewProxy = the_proxy;
+		theSurface = the_surface;
 	}
 	@Override
 	public TiUIView createView(Activity activity)
@@ -134,7 +140,7 @@ public class BodyProxy extends TiViewProxy
         return theBody;
 	}
 	@Kroll.getProperty @Kroll.method
-	public TiViewProxy viewproxy()
+	public SpriteProxy getViewproxy()
 	{
         return viewProxy;
 	}

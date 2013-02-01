@@ -39,6 +39,13 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 
 import org.box2d.box2d.BodyProxy;
 
+
+import co.lanica.platino.ColanicaplatinoGameView;
+import co.lanica.platino.PlatinoSprite;
+import co.lanica.platino.proxy.GameViewProxy;
+import co.lanica.platino.proxy.SceneProxy;
+import co.lanica.platino.proxy.SpriteProxy;
+
 // This proxy can be created by calling Box2d.createBox2dWorld({message: "hello world"})
 @Kroll.proxy(creatableInModule=Box2dModule.class)
 public class Box2dWorldProxy extends TiViewProxy
@@ -46,9 +53,10 @@ public class Box2dWorldProxy extends TiViewProxy
 	// Standard Debugging variables
 	private static final String LCAT = "Box2dWorldProxy";
 	private static final boolean DBG = TiConfig.LOGD;
-	private static final int PTM_RATIO = 16; // magic number from iOS version
+	private static final float PTM_RATIO = 16; // magic number from iOS version
 
 	private World theWorld;
+	private GameViewProxy theSurface;
 	private Box2dWorld worldView;
 	private ArrayList listOfBodies;
 	private Handler ticksTimer;
@@ -61,6 +69,9 @@ public class Box2dWorldProxy extends TiViewProxy
 
 		public Box2dWorld(TiViewProxy proxy) {
 			super(proxy);
+		Log.d(LCAT, "Box2dWorld constructor " + proxy);
+			
+//			theSurface = proxy;
 			LayoutArrangement arrangement = LayoutArrangement.DEFAULT;
 
 			if (proxy.hasProperty(TiC.PROPERTY_LAYOUT)) {
@@ -125,14 +136,18 @@ public class Box2dWorldProxy extends TiViewProxy
 		}
 	}
 	
-	protected void addBodyToView(TiViewProxy viewproxy)
+	protected void addBodyToView(SpriteProxy viewproxy)
 	{
 //		if (_destroyed==NO)
 		{
 //			[self _createWorld];
 			//worldView.add(viewproxy);
 		Log.d(LCAT, "addBodyToView viewproxy: " + viewproxy);
-			this.add(viewproxy);
+			//this.add(viewproxy);
+
+			SceneProxy scene = (SceneProxy)theSurface.topScene();
+			scene.add(viewproxy);
+		
 		}
 	}
 
@@ -200,6 +215,8 @@ public class Box2dWorldProxy extends TiViewProxy
 		Iterator<Body> body_iter = theWorld.getBodies();
 		Log.d(LCAT, "tick body_iter: "+ body_iter );
 		
+		int surface_height = theSurface.getView().getGameViewHeight();
+		
 		while(body_iter.hasNext())
 		{
 			Body current_body = body_iter.next();
@@ -213,15 +230,22 @@ public class Box2dWorldProxy extends TiViewProxy
 				if(user_data instanceof BodyProxy) 
 				{
 					BodyProxy body_proxy = (BodyProxy)user_data;
+					PlatinoSprite one_view = body_proxy.getViewproxy().getSprite();
 
-					TiUIView ti_physical_view = body_proxy.viewproxy().getOrCreateView();
-					View native_physical_view = ti_physical_view.getNativeView();
+				//	TiUIView ti_physical_view = body_proxy.getViewproxy().getOrCreateView();
+				//	View native_physical_view = ti_physical_view.getNativeView();
 
 					Vector2 position = current_body.getPosition();
 		
 					float new_center_x = position.x * PTM_RATIO;
-					int surface_height = this.getOrCreateView().getNativeView().getHeight();
+//					int surface_height = this.getOrCreateView().getNativeView().getHeight();
 					float new_center_y = surface_height - position.y * PTM_RATIO;
+
+					// is there a moveCenter like iOS?
+					one_view.move(new_center_x, new_center_y);
+					one_view.rotate((float)(java.lang.Math.toDegrees(current_body.getAngle())));
+
+					/*
 
 					int physical_width = native_physical_view.getWidth();
 					int physical_height = native_physical_view.getHeight();
@@ -231,7 +255,7 @@ public class Box2dWorldProxy extends TiViewProxy
 					native_physical_view.setBottom(new_bottom);
 
 		Log.d(LCAT, "tick new_left: " + new_left + " new_bottom " + new_bottom);
-					
+					*/
 					/*
 		int physical_left =  native_physical_view.getLeft();
 		int physical_bottom =  native_physical_view.getBottom();
@@ -271,7 +295,7 @@ public class Box2dWorldProxy extends TiViewProxy
 		synchronized(this)
 		{
 
-		TiViewProxy viewproxy = (TiViewProxy)args[0];
+		SpriteProxy viewproxy = (SpriteProxy)args[0];
 		HashMap props = (HashMap)args[1];
 		Log.d(LCAT, "printing viewproxy: " + viewproxy);
 			
@@ -306,9 +330,11 @@ public class Box2dWorldProxy extends TiViewProxy
             }
         });
 */
+		addBodyToView(viewproxy);
 
-		TiUIView ti_physical_view = viewproxy.getOrCreateView();
-
+		PlatinoSprite ti_physical_view = viewproxy.getSprite();
+		/*
+//		TiUIView ti_physical_view = viewproxy.getOrCreateView();
 		Log.d(LCAT, "printing ti_physical_view: " + ti_physical_view);
 		
 		View native_physical_view = ti_physical_view.getNativeView();
@@ -320,25 +346,60 @@ public class Box2dWorldProxy extends TiViewProxy
 		int physical_bottom =  native_physical_view.getBottom();
 		int physical_center_x = (physical_width/2)+physical_left;
 		int physical_center_y = (physical_height/2)+physical_bottom;
+*/
 
-		int box_width = physical_width/PTM_RATIO/2;
-		int box_height = physical_height/PTM_RATIO/2;
+		float physical_width = ti_physical_view.getWidth();
+		float physical_height = ti_physical_view.getHeight();
+
+		float physical_center_x = ti_physical_view.getCenterX();
+		float physical_center_y = ti_physical_view.getCenterY();
+		
+				
+		float box_width = physical_width/PTM_RATIO/2.0f;
+		float box_height = physical_height/PTM_RATIO/2.0f;
 
 
-		Log.d(LCAT, "printing worldView: " + worldView);
-		Log.d(LCAT, "printing physical_left: " + physical_left);
-		Log.d(LCAT, "printing physical_bottom: " + physical_bottom);
+//		Log.d(LCAT, "printing worldView: " + worldView);
+//		Log.d(LCAT, "printing physical_left: " + physical_left);
+//		Log.d(LCAT, "printing physical_bottom: " + physical_bottom);
 		Log.d(LCAT, "printing box_width: " + box_width);
 		Log.d(LCAT, "printing box_height: " + box_height);
 
-		int surface_height = this.getOrCreateView().getNativeView().getHeight();
+	//	int surface_height = theSurface.getOrCreateView().getNativeView().getHeight();
+		float surface_height = theSurface.getView().getGameViewHeight();
 //		int surface_height = worldView.getNativeView().getHeight();
+
+		
+		    // if GameView height is not yet set so we assume default size
+		if (surface_height == 0)
+		{
+			/*
+        NSInteger orientation = [surface.orientation intValue];
+        if (orientation == UIInterfaceOrientationLandscapeLeft || orientation == UIInterfaceOrientationLandscapeRight) {
+            if (UIGraphicsBeginImageContextWithOptions != NULL) {
+                height = 640;
+            } else {
+                height = 320;
+            }
+        } else {
+            if (UIGraphicsBeginImageContextWithOptions != NULL) {
+                height = 960;
+            } else {
+                height = 480;
+            }
+        }
+		*/
+			
+		surface_height = 960.0f;
+    }
+		Log.d(LCAT, "surface_height: " + surface_height);
 
 		// Define the dynamic body.
 		BodyDef body_def = new BodyDef();
 		body_def.type = BodyDef.BodyType.DynamicBody;
 	
 		body_def.position = new Vector2(physical_center_x/PTM_RATIO, (surface_height - physical_center_y)/PTM_RATIO);
+		body_def.angle = (float)(java.lang.Math.toRadians(ti_physical_view.getAngle()));
 	
     
 		if(null==listOfBodies)
@@ -442,7 +503,7 @@ box_height=50;
 			the_body.setType(BodyDef.BodyType.KinematicBody);		
 		}
 
-		BodyProxy body_proxy = new BodyProxy(the_body, viewproxy);
+		BodyProxy body_proxy = new BodyProxy(the_body, viewproxy, theSurface);
 		the_body.setUserData(body_proxy);
 		
 			/*
@@ -484,4 +545,24 @@ box_height=50;
 	{
 	    Log.d(LCAT, "Tried setting module message to: " + message);
 	}
+
+
+
+	@Kroll.getProperty @Kroll.method
+	public GameViewProxy getSurface()
+	{
+	    Log.d(LCAT, "getSurface: " + theSurface);
+		
+        return theSurface;
+	}
+
+	@Kroll.setProperty @Kroll.method
+	public void setSurface(GameViewProxy surface)
+	{
+		theSurface = surface;
+
+	    Log.d(LCAT, "setSurface: " + theSurface);
+
+	}
+
 }

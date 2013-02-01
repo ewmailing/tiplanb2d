@@ -129,6 +129,9 @@ timodule.xml.
 			<include name="*.jar"/>
 			<include name="modules/titanium-*.jar"/>
 		</fileset>
+		<fileset dir="${titanium.platform}/../../../../modules/android">
+			<include name="*/*/*.jar"/>
+		</fileset>
 		<pathelement path="${android.jar}"/>
 		<pathelement path="${google.apis}/libs/maps.jar"/>
 	</path>
